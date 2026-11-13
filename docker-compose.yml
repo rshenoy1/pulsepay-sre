@@ -1,0 +1,45 @@
+﻿services:
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: pulsepay-sre-postgres
+    environment:
+      POSTGRES_USER: pulsepay
+      POSTGRES_PASSWORD: pulsepay_secret
+      POSTGRES_DB: pulsepay_db
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulsepay -d pulsepay_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pulsepay-api:
+    build: .
+    container_name: pulsepay-sre-api
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://pulsepay:pulsepay_secret@postgres-db:5432/pulsepay_db
+      SIMULATE_LATENCY_MS: "0"
+    ports:
+      - "8080:8000"
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: pulsepay-sre-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    container_name: pulsepay-sre-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    ports:
+      - "3000:3000"

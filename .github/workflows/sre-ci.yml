@@ -1,0 +1,23 @@
+﻿name: PulsePay SRE CI Pipeline
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  verify-sre-controls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r app/requirements.txt
+      - run: python -m pytest -v
+      - uses: hashicorp/setup-terraform@v3
+      - working-directory: terraform
+        run: |
+          terraform init -backend=false
+          terraform validate

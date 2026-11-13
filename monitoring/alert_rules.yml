@@ -1,0 +1,22 @@
+﻿groups:
+  - name: pulsepay_slo_alerts
+    rules:
+      - alert: HighErrorRateSLOBreach
+        expr: |
+          sum(rate(http_requests_total{job="pulsepay-api",status=~"5.."}[1m]))
+          /
+          sum(rate(http_requests_total{job="pulsepay-api"}[1m])) > 0.01
+        for: 15s
+        labels:
+          severity: critical
+        annotations:
+          summary: "PulsePay 5xx error rate exceeded 1% (Burning Error Budget!)"
+
+      - alert: HighLatencyP95SLOBreach
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="pulsepay-api"}[1m])) by (le)) > 0.25
+        for: 15s
+        labels:
+          severity: warning
+        annotations:
+          summary: "PulsePay p95 latency exceeded 250ms SLO target"
